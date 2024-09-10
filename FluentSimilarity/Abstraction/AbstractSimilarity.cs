@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 
 namespace FluentSimilarity.Abstraction;
 
+
 public abstract class AbstractSimilarity<T> : ISimilarity<T>
 {
     private readonly List<(Func<T, T, double> Rule, string PropertyName)> _rules = new();
@@ -32,9 +33,9 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
             return 0;
         }
 
-        // Calculate average similarity based on all rules
-        var totalScore = _rules.Select(rule => rule.Rule(obj1, obj2)).Average();
-        return totalScore;
+        // Calculate average similarity based on all rules, excluding scores that are -1
+        var validScores = _rules.Select(rule => rule.Rule(obj1, obj2)).Where(score => score != -1);
+        return validScores.Any() ? validScores.Average() : 0;
     }
 
     public ComparingResults CompareWithDetails(T obj1, T obj2)
