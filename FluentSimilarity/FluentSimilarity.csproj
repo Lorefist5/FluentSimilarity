@@ -7,7 +7,17 @@
     <Version>1.0.1</Version>
     <Authors>Andres</Authors>
     <Description>FluentSimilarity: A flexible and fluent API for comparing object properties, supporting string, numeric, and date-based similarity calculations with customizable rules.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>FluentSimilarity</Title>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
