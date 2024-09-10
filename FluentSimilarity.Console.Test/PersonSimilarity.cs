@@ -9,6 +9,7 @@ public class PersonSimilarity : AbstractSimilarity<Person>
             .SoundexCompare();
 
         RuleFor(x => x.LastName)
+            .JaroWinklerCompare()
             .LevenshteinCompare()
             .SoundexCompare();
 

@@ -11,6 +11,19 @@ namespace FluentSimilarity.Builder;
 
 public partial class RuleBuilder<T, TProperty>
 {
+    //Exact match
+    public RuleBuilder<T, TProperty> ExactMatch()
+    {
+        return AddComparison((value1, value2) =>
+        {
+            if (value1 is string str1 && value2 is string str2)
+            {
+                return str1.Equals(str2, StringComparison.OrdinalIgnoreCase) ? 100.0 : 0.0;
+            }
+            return 0.0;
+        });
+    }
+
     // Levenshtein Distance Comparison using SimMetrics
     public RuleBuilder<T, TProperty> LevenshteinCompare()
     {
@@ -21,6 +34,19 @@ public partial class RuleBuilder<T, TProperty>
                 var levenshtein = new Levenstein();
                 var result = levenshtein.GetSimilarity(str1, str2) * 100;
                 return result;// SimMetrics returns a score between 0 and 1, so multiply by 100
+            }
+            return 0.0;
+        });
+    }
+    public RuleBuilder<T, TProperty> JaroWinklerCompare()
+    {
+        return AddComparison((value1, value2) =>
+        {
+            if (value1 is string str1 && value2 is string str2)
+            {
+                var jaroWinkler = new JaroWinkler();
+                var result = jaroWinkler.GetSimilarity(str1, str2) * 100;
+                return result;
             }
             return 0.0;
         });

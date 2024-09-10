@@ -6,33 +6,28 @@ namespace FluentSimilarity.Builder;
 public partial class RuleBuilder<T, TProperty>
 {
     private readonly Func<T, TProperty> _propertySelector;
-    private readonly List<Func<TProperty, TProperty, double>> _comparisonFuncs = new();
+    private readonly string _propertyName;
+    private readonly List<Func<T, T, double>> _comparisons = new();
 
-    public RuleBuilder(Func<T, TProperty> propertySelector)
+    public RuleBuilder(Func<T, TProperty> propertySelector, string propertyName)
     {
         _propertySelector = propertySelector;
+        _propertyName = propertyName;
     }
 
-    public RuleBuilder<T, TProperty> AddComparison(Func<TProperty, TProperty, double> comparisonFunc)
+    public RuleBuilder<T, TProperty> AddComparison(Func<TProperty, TProperty, double> comparison)
     {
-        _comparisonFuncs.Add(comparisonFunc);
+        _comparisons.Add((obj1, obj2) => comparison(_propertySelector(obj1), _propertySelector(obj2)));
         return this;
     }
 
     public Func<T, T, double> Build()
     {
-        return (obj1, obj2) =>
-        {
-            var value1 = _propertySelector(obj1);
-            var value2 = _propertySelector(obj2);
+        return (obj1, obj2) => _comparisons.Select(comp => comp(obj1, obj2)).Average();
+    }
 
-            if (_comparisonFuncs.Count > 0)
-            {
-                // Return the maximum similarity score among all comparisons for this property
-                return _comparisonFuncs.Select(func => func(value1, value2)).Max();
-            }
-
-            return 0.0;
-        };
+    public string GetPropertyName()
+    {
+        return _propertyName;
     }
 }
