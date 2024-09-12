@@ -6,12 +6,14 @@ public class PersonSimilarity : AbstractSimilarity<Person>
     {
         RuleFor(x => x.FirstName)
             .LevenshteinCompare()
-            .SoundexCompare();
+            .SoundexCompare()
+            .NotLessThan(50);
 
         RuleFor(x => x.LastName)
+            .SoundexCompare()
             .JaroWinklerCompare()
             .LevenshteinCompare()
-            .SoundexCompare();
+            .When((s1, s2) => s1.Length / s2.Length <= 2 && s2.Length / s1.Length <= 2);
 
         RuleFor(x => x.Age)
             .ExactMatch()
