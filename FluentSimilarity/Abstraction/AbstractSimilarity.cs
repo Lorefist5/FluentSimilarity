@@ -9,6 +9,9 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
     private readonly List<(Func<T, T, double> Rule, string PropertyName)> _rules = new();
     private readonly Dictionary<string, double> _weights = new(); // To store weights for properties
 
+    /// <summary>
+    /// Adds a rule for comparing a specific property of the object.
+    /// </summary>
     protected RuleBuilder<T, TProperty> RuleFor<TProperty>(
         Expression<Func<T, TProperty>> propertySelector
     )
@@ -22,9 +25,6 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
     /// <summary>
     /// Assigns a weight to a specific property.
     /// </summary>
-    /// <typeparam name="TProperty">The property type</typeparam>
-    /// <param name="propertySelector">The property to assign the weight to</param>
-    /// <param name="weight">The weight amount</param>
     protected void WeightFor<TProperty>(
         Expression<Func<T, TProperty>> propertySelector,
         double weight
@@ -41,6 +41,9 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
         }
     }
 
+    /// <summary>
+    /// Retrieves the property name from the provided property selector.
+    /// </summary>
     private string GetPropertyName<TProperty>(Expression<Func<T, TProperty>> propertySelector)
     {
         if (propertySelector.Body is MemberExpression memberExpression)
@@ -50,6 +53,9 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
         throw new ArgumentException("Invalid property selector expression");
     }
 
+    /// <summary>
+    /// Compares two objects using the defined rules and weights, excluding invalid scores (-1).
+    /// </summary>
     public double Compare(T obj1, T obj2)
     {
         if (obj1 == null || obj2 == null)
@@ -57,22 +63,28 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
             return 0;
         }
 
-        // Get total weight sum for normalization
-        var totalWeight = _weights.Values.DefaultIfEmpty(1).Sum(); // Default to 1 if no weights are defined
+        // Filter out invalid scores (-1) and calculate total weight dynamically
+        var validScoresAndWeights = _rules
+            .Select(rule =>
+            {
+                var score = rule.Rule(obj1, obj2);
+                if (score == -1)
+                    return (Score: -1, Weight: 0); // Skip invalid scores
+                var weight = _weights.ContainsKey(rule.PropertyName)
+                    ? _weights[rule.PropertyName]
+                    : 1;
+                return (Score: score, Weight: weight);
+            })
+            .Where(x => x.Score != -1); // Exclude invalid scores
+
+        // Calculate total weight
+        var totalWeight = validScoresAndWeights.Sum(x => x.Weight);
+        if (totalWeight == 0)
+            return 0; // Prevent division by zero
 
         // Calculate weighted similarity
-        var weightedScores = _rules.Select(rule =>
-        {
-            var score = rule.Rule(obj1, obj2);
-            if (score == -1)
-                return 0; // Skip invalid scores
-
-            // Apply weight if it exists, otherwise use 1 as default
-            var weight = _weights.ContainsKey(rule.PropertyName) ? _weights[rule.PropertyName] : 1;
-            return score * weight;
-        });
-
-        return totalWeight > 0 ? weightedScores.Sum() / totalWeight : 0;
+        var weightedScores = validScoresAndWeights.Sum(x => x.Score * x.Weight);
+        return weightedScores / totalWeight; // Normalize by total weight
     }
 
     public ComparingResults CompareWithDetails(T obj1, T obj2)
@@ -88,16 +100,10 @@ public abstract class AbstractSimilarity<T> : ISimilarity<T>
         }
 
         var results = _rules
-            .Select(rule =>
+            .Select(rule => new ComparisonDetail
             {
-                var score = rule.Rule(obj1, obj2);
-
-                // Include the weight in the result details
-                var weight = _weights.ContainsKey(rule.PropertyName)
-                    ? _weights[rule.PropertyName]
-                    : 1;
-
-                return new ComparisonDetail { PropertyName = rule.PropertyName, Score = score };
+                PropertyName = rule.PropertyName,
+                Score = rule.Rule(obj1, obj2),
             })
             .ToArray();
 
